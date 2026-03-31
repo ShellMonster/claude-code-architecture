@@ -258,7 +258,7 @@ sequenceDiagram
             end
 
             Note over Query: 步骤6-后采样钩子-异步触发
-            Query-.>>Memory: executePostSamplingHooks
+            Query--)Memory: executePostSamplingHooks
 
             Note over Query: 步骤7-Token预算检查
             Query->>Query: budget允许继续?
