@@ -1,0 +1,26 @@
+# 源码文件 - 不要提交
+*.ts
+*.tsx
+*.js
+*.jsx
+*.json
+*.css
+*.html
+*.py
+*.md
+!README.md
+
+# 目录
+*/
+!.gitignore
+!LICENSE
+
+# 系统
+.DS_Store
+*.swp
+*.swo
+*~
+.env
+.env.*
+node_modules/
+.sisyphus/
