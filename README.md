@@ -4,6 +4,31 @@
 
 ---
 
+## 目录
+
+- [项目概述](#项目概述)
+- [项目架构](#项目架构)
+  - [架构分层图](#架构分层图)
+  - [交互时序图](#交互时序图)
+  - [数据流概览](#数据流概览)
+- [目录结构](#目录结构)
+- [模块详解](#模块详解)
+  - [1. 入口与启动流程](#1-入口与启动流程)
+  - [2. 核心类型系统](#2-核心类型系统)
+  - [3. UI 系统 (Ink)](#3-ui-系统-ink)
+  - [4. 服务层](#4-服务层)
+  - [5. 记忆系统](#5-记忆系统)
+  - [6. 远程控制](#6-远程控制)
+  - [7. 扩展系统](#7-扩展系统)
+  - [8. 原生 TS 模块](#8-原生-ts-模块)
+  - [9. 其他重要模块](#9-其他重要模块)
+- [数据流](#数据流)
+- [技术栈](#技术栈)
+- [关键文件规模](#关键文件规模)
+- [统计](#统计)
+
+---
+
 ## 项目概述
 
 Claude Code 是一个基于 **React + Ink** 构建的终端 AI 编程助手。它允许用户在终端中与 Claude AI 进行交互式对话，执行文件操作、运行命令、管理项目等任务。
@@ -193,7 +218,6 @@ sequenceDiagram
     participant PUI as processUserInput
     participant Query as 查询引擎
     participant API as Anthropic API
-    participant Perm as 权限系统
     participant Tool as 工具系统
     participant Memory as 记忆系统
 
@@ -201,52 +225,51 @@ sequenceDiagram
     REPL->>PUI: 路由输入
 
     alt 斜杠命令
-        PUI->>PUI: 执行命令(100+命令)
+        PUI->>PUI: 执行命令-100+命令
         PUI-->>REPL: 返回结果
     else Bash命令
         PUI->>PUI: processBashCommand
         PUI-->>REPL: 返回结果
     else 普通对话
         PUI-->>REPL: shouldQuery=true
-        REPL->>Query: 调用query()
+        REPL->>Query: 调用query
 
-        loop 对话循环(while true)
-            Note over Query: 步骤1: 压缩检查
-            Query->>Query: Microcompact(轻量)
-            Query->>Query: Autocompact(如需)
+        loop 对话循环
+            Note over Query: 步骤1-压缩检查
+            Query->>Query: Microcompact-轻量压缩
+            Query->>Query: Autocompact-如需压缩
 
-            Note over Query: 步骤2: 附件预取
-            Query->>Memory: 加载MEMORY.md/技能附件
+            Note over Query: 步骤2-附件预取
+            Query->>Memory: 加载MEMORY.md和技能附件
 
-            Note over Query: 步骤3: 调用API
-            Query->>API: 流式请求(callModel)
+            Note over Query: 步骤3-调用API
+            Query->>API: 流式请求callModel
             API-->>Query: 流式token响应
 
             alt 响应包含tool_use
-                Note over Query: 步骤4: 执行工具(含内部权限检查)
-                Query->>Tool: StreamingToolExecutor.run()
+                Note over Query: 步骤4-执行工具-含内部权限检查
+                Query->>Tool: StreamingToolExecutor.run
                 Note over Tool: canUseTool内部权限校验
                 Tool-->>Query: 工具结果
-
-                Note over Query: 步骤5: 继续循环
+                Note over Query: 步骤5-继续循环
                 Query->>Query: 追加结果到消息
             else 响应无tool_use
                 Note over Query: 结束工具循环
             end
 
-            Note over Query: 步骤6: 后采样钩子(异步fire-and-forget)
-            Query-.>>Memory: void executePostSamplingHooks
+            Note over Query: 步骤6-后采样钩子-异步触发
+            Query-.>>Memory: executePostSamplingHooks
 
-            Note over Query: 步骤7: Token预算检查
+            Note over Query: 步骤7-Token预算检查
             Query->>Query: budget允许继续?
 
             alt 预算耗尽或无需继续
-                Note over Query: 步骤8: 停止钩子
-                Query->>Query: StopHooks(记忆提取等)
+                Note over Query: 步骤8-停止钩子
+                Query->>Query: StopHooks-记忆提取等
                 Query-->>REPL: 渲染最终响应
                 REPL-->>User: 显示AI回复
             else 预算充足且需继续
-                Query->>API: 继续调用(注入续查消息)
+                Query->>API: 继续调用-注入续查消息
             end
 
             Note over Query: 错误恢复
