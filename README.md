@@ -107,8 +107,10 @@ graph TB
 
     subgraph Services["服务层 services/"]
         API["services/api/<br/>Anthropic API客户端"]
+        MCP["services/mcp/<br/>MCP连接管理(OAuth/传输)"]
         LSP["services/lsp/<br/>语言服务器协议"]
         Analytics["services/analytics/<br/>遥测 Datadog/GrowthBook"]
+        MCPService["services/mcp/<br/>MCP连接管理(OAuth/传输)"]
         SessionMemory["SessionMemory<br/>会话记忆提取"]
         AutoDream["autoDream<br/>夜间记忆整理"]
     end
@@ -221,28 +223,25 @@ sequenceDiagram
             API-->>Query: 流式token响应
 
             alt 响应包含tool_use
-                Note over Query: 步骤4: 后采样钩子
-                Query->>Query: PostSamplingHooks
-
-                Note over Query: 步骤5: 权限检查
-                Query->>Perm: canUseTool检查
-                Perm-->>Query: 批准/拒绝
-
-                Note over Query: 步骤6: 执行工具
-                Query->>Tool: StreamingToolExecutor
+                Note over Query: 步骤4: 执行工具(含内部权限检查)
+                Query->>Tool: StreamingToolExecutor.run()
+                Note over Tool: canUseTool内部权限校验
                 Tool-->>Query: 工具结果
 
-                Note over Query: 步骤7: 继续循环
+                Note over Query: 步骤5: 继续循环
                 Query->>Query: 追加结果到消息
             else 响应无tool_use
                 Note over Query: 结束工具循环
             end
 
-            Note over Query: 步骤8: Token预算检查
+            Note over Query: 步骤6: 后采样钩子(异步fire-and-forget)
+            Query-.>>Memory: void executePostSamplingHooks
+
+            Note over Query: 步骤7: Token预算检查
             Query->>Query: budget允许继续?
 
             alt 预算耗尽或无需继续
-                Note over Query: 步骤9: 停止钩子
+                Note over Query: 步骤8: 停止钩子
                 Query->>Query: StopHooks(记忆提取等)
                 Query-->>REPL: 渲染最终响应
                 REPL-->>User: 显示AI回复
