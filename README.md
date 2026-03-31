@@ -137,11 +137,11 @@ graph TB
     AppState --> History
     StopHooks --> SessionMemory
 
-    style UI fill:#e1f5fe,color:#fff,stroke:#333
-    style Engine fill:#4a990e,color:#fff,stroke:#333
-    style Tools fill:#f0ad0d0,color:#fff,stroke:#333
-    style Services fill:#ffe0b2,color:#fff,stroke:#333
-    style State fill:#e8f4ea,color:#fff,stroke:#333
+    style UI fill:#e1f5fe,stroke:#333
+    style Engine fill:#c8e6c9,stroke:#333
+    style Tools fill:#bbdefb,stroke:#333
+    style Services fill:#ffe0b2,stroke:#333
+    style State fill:#f3e5f5,stroke:#333
 ```
 
 ### 交互时序图
@@ -155,29 +155,23 @@ sequenceDiagram
     participant Tool as 工具系统
     participant State as 状态管理
 
-    rect rgb(127, 191, 97)
     Note over User: 1. 用户输入提示词
     User->>REPL: 输入文本/斜杠命令
-    rect rgb(127, 191, 97)
     Note over REPL: 2. 路由到查询引擎
     REPL->>Query: processUserInput()
-    rect rgb(127, 191, 97)
     Note over Query: 3. 查询引擎调用API
     Query->>API: 发送消息(流式)
     API-->>Query: 返回流式响应
 
-    alt 工具调用循环
-    rect rgb(255, 183, 77)
-    Note over Query: 4a. 检测到tool_use
-    Query->>Tool: 执行 Tool.call()
-    Tool->>State: 更新状态/文件
-    Tool-->>Query: 返回工具结果
-    rect rgb(127, 191, 97)
-    Note over Query: 5. 检查是否继续
-    Query->>Query: Token Budget检查
+    alt 检测到 tool_use
+        Note over Query: 4a. 工具调用循环
+        Query->>Tool: 执行 Tool.call()
+        Tool->>State: 更新状态/文件
+        Tool-->>Query: 返回工具结果
+        Note over Query: 5. Token Budget检查
+        Query->>Query: 是否继续循环
     end
 
-    rect rgb(127, 191, 97)
     Note over Query: 6. 循环结束
     Query->>Query: 执行 Stop Hooks
     Query->>REPL: 渲染最终响应
